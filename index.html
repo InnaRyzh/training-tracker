@@ -69,6 +69,7 @@
       const [groupCount, setGroupCount] = useState(1);
       const [clientName, setClientName] = useState('');
       const [activeTab, setActiveTab] = useState('history');
+      const [expandedMonth, setExpandedMonth] = useState(null);
       const [confirmDelete, setConfirmDelete] = useState(null);
       const [toast, setToast] = useState(null);
       const fileInputRef = React.useRef(null);
@@ -199,10 +200,10 @@
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <p className="text-gray-400 text-sm font-medium mb-1">Привет,</p>
-                  <h1 className="text-2xl font-bold flex items-center gap-2">Тренер <span className="text-xl">👋</span></h1>
+                  <h1 className="text-2xl font-bold flex items-center gap-2">Иннуся <span className="text-xl">👋</span></h1>
                 </div>
-                <div className="w-10 h-10 bg-[#1E1E1E] rounded-full flex items-center justify-center border border-gray-800">
-                  <Icon name="trending-up" className="w-5 h-5 text-orange-400" />
+                <div className="w-10 h-10 bg-[#1E1E1E] rounded-full flex items-center justify-center border border-gray-800 text-xl">
+                  💰
                 </div>
               </div>
 
@@ -255,11 +256,7 @@
 
               {/* Add form */}
               <div className="mb-8">
-                <div className="flex justify-between items-center mb-4 px-1">
-                  <h2 className="text-lg font-bold flex items-center gap-2">
-                    <Icon name="plus-circle" className={`w-5 h-5 ${type === 'group' ? 'text-[#3B63F6]' : 'text-[#FF6B35]'}`} />
-                    Новая запись
-                  </h2>
+                <div className="flex justify-end items-center mb-4 px-1">
                   <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
                     className="bg-gray-50 text-sm font-semibold text-gray-600 outline-none cursor-pointer py-1.5 px-3 rounded-lg border border-gray-100" required />
                 </div>
@@ -343,23 +340,58 @@
                       <p className="text-gray-400 font-medium text-sm">Пока нет данных для статистики</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {monthlyStats.map((stat) => (
-                        <div key={stat.month} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-[1.25rem] bg-gray-200/50 flex items-center justify-center text-gray-500">
-                              <Icon name="calendar" className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <h3 className="font-bold text-gray-900 text-[15px]">{formatMonth(stat.month)}</h3>
-                              <p className="text-xs text-gray-500 font-medium mt-0.5">
-                                {stat.groupCount} групп. · {stat.personalCount} перс.
-                              </p>
-                            </div>
+                    <div className="space-y-3">
+                      {monthlyStats.map((stat) => {
+                        const isOpen = expandedMonth === stat.month;
+                        const monthEntries = isOpen ? entries
+                          .filter(e => e.date.startsWith(stat.month))
+                          .sort((a, b) => new Date(b.date) - new Date(a.date) || b.timestamp - a.timestamp) : [];
+                        return (
+                          <div key={stat.month}>
+                            <button onClick={() => setExpandedMonth(isOpen ? null : stat.month)}
+                              className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                                isOpen ? 'bg-white border-gray-200 shadow-sm' : 'bg-gray-50 border-gray-100'}`}>
+                              <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center ${
+                                  isOpen ? 'bg-[#3B63F6] text-white' : 'bg-gray-200/50 text-gray-500'}`}>
+                                  <Icon name="calendar" className="w-5 h-5" />
+                                </div>
+                                <div className="text-left">
+                                  <h3 className="font-bold text-gray-900 text-[15px]">{formatMonth(stat.month)}</h3>
+                                  <p className="text-xs text-gray-500 font-medium mt-0.5">
+                                    {stat.groupCount} групп. · {stat.personalCount} перс.
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-900 text-[15px]">{stat.earned.toLocaleString('ru-RU')} ₴</span>
+                                <span className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}>▾</span>
+                              </div>
+                            </button>
+                            {isOpen && (
+                              <div className="mt-2 ml-4 mr-1 space-y-3 fade-in">
+                                {monthEntries.map((entry) => (
+                                  <div key={entry.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                                    <div className="flex items-center gap-3">
+                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                                        entry.type === 'group' ? 'bg-[#EEF2FF] text-[#3B63F6]' : 'bg-[#FFF0ED] text-[#FF6B35]'}`}>
+                                        <Icon name={entry.type === 'group' ? 'users' : 'user'} className="w-4 h-4" />
+                                      </div>
+                                      <div>
+                                        <p className="font-semibold text-gray-800 text-sm">
+                                          {entry.type === 'group' ? `Групповая · ${entry.groupCount} чел.` : entry.clientName}
+                                        </p>
+                                        <p className="text-[11px] text-gray-400">{formatDate(entry.date)}</p>
+                                      </div>
+                                    </div>
+                                    <span className="font-bold text-gray-700 text-sm">{entry.earned} ₴</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          <span className="font-bold text-gray-900 text-[15px]">{stat.earned.toLocaleString('ru-RU')} ₴</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )
                 )}
