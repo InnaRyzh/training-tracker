@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Тренировки">
-  <meta name="theme-color" content="#0f0f0f">
+  <meta name="theme-color" content="#121212">
   <title>Мои Тренировки</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -15,64 +15,24 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     body { font-family: 'Inter', -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
     body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
-    input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+    html { overscroll-behavior-y: contain; }
     .fade-in { animation: fadeIn 0.2s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-    html { overscroll-behavior-y: contain; }
-    .header-gradient {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
-      position: relative;
-      overflow: hidden;
-    }
-    .header-gradient::before {
-      content: '';
-      position: absolute;
-      width: 200px;
-      height: 200px;
-      background: radial-gradient(circle, rgba(232,126,50,0.4) 0%, rgba(232,126,50,0.1) 40%, transparent 70%);
-      top: -40px;
-      right: -40px;
-      border-radius: 50%;
-    }
-    .header-gradient::after {
-      content: '';
-      position: absolute;
-      width: 150px;
-      height: 150px;
-      background: radial-gradient(circle, rgba(232,126,50,0.2) 0%, transparent 70%);
-      bottom: -30px;
-      left: 30%;
-      border-radius: 50%;
-    }
-    .btn-orange {
-      background: linear-gradient(135deg, #e87e32 0%, #f4a261 100%);
-    }
-    .btn-orange:active {
-      background: linear-gradient(135deg, #d06a20 0%, #e09050 100%);
-    }
-    .card-dark {
-      background: #1a1a2e;
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
   </style>
 </head>
-<body class="bg-neutral-50 text-slate-800">
+<body class="bg-[#121212] text-white">
   <div id="root"></div>
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
   <script type="text/babel">
-    const { useState, useMemo, useEffect, useCallback } = React;
+    const { useState, useMemo, useEffect } = React;
 
-    // SVG Icon components using Lucide paths
     const Icon = ({ name, className = "w-5 h-5" }) => {
       const icons = {
         'trending-up': <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
-        'clock': <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
         'wallet': <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>,
         'plus-circle': <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>,
         'calendar': <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>,
@@ -90,23 +50,16 @@
     const GROUP_RATE = 150;
     const PERSONAL_RATE = 600;
 
-    // Load from localStorage
     function loadEntries() {
       try {
         const data = localStorage.getItem(STORAGE_KEY);
         return data ? JSON.parse(data) : [];
-      } catch {
-        return [];
-      }
+      } catch { return []; }
     }
 
-    // Save to localStorage
     function saveEntries(entries) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-      } catch (e) {
-        console.error('Failed to save:', e);
-      }
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+      catch (e) { console.error('Failed to save:', e); }
     }
 
     function App() {
@@ -115,28 +68,22 @@
       const [type, setType] = useState('group');
       const [groupCount, setGroupCount] = useState(1);
       const [clientName, setClientName] = useState('');
+      const [activeTab, setActiveTab] = useState('history');
       const [confirmDelete, setConfirmDelete] = useState(null);
       const [toast, setToast] = useState(null);
       const fileInputRef = React.useRef(null);
 
-      // Request persistent storage on mount
       useEffect(() => {
-        if (navigator.storage && navigator.storage.persist) {
-          navigator.storage.persist();
-        }
+        if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
       }, []);
 
-      // Save whenever entries change
-      useEffect(() => {
-        saveEntries(entries);
-      }, [entries]);
+      useEffect(() => { saveEntries(entries); }, [entries]);
 
       const showToast = (msg, isError) => {
         setToast({ msg, isError });
         setTimeout(() => setToast(null), 3000);
       };
 
-      // Export data as JSON file
       const handleExport = () => {
         const data = JSON.stringify(entries, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
@@ -149,7 +96,6 @@
         showToast('Данные экспортированы');
       };
 
-      // Import data from JSON file
       const handleImport = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -158,20 +104,14 @@
           try {
             const data = JSON.parse(ev.target.result);
             if (!Array.isArray(data)) throw new Error('not array');
-            // Merge: add entries that don't already exist by id
             setEntries(prev => {
               const existingIds = new Set(prev.map(e => e.id));
               const newOnes = data.filter(e => e.id && !existingIds.has(e.id));
-              if (newOnes.length === 0) {
-                showToast('Нет новых записей для импорта');
-                return prev;
-              }
+              if (newOnes.length === 0) { showToast('Нет новых записей для импорта'); return prev; }
               showToast(`Импортировано ${newOnes.length} записей`);
               return [...newOnes, ...prev];
             });
-          } catch {
-            showToast('Ошибка: файл повреждён', true);
-          }
+          } catch { showToast('Ошибка: файл повреждён', true); }
         };
         reader.readAsText(file);
         e.target.value = '';
@@ -189,13 +129,10 @@
           details = clientName.trim() || 'Без имени';
         }
         const newEntry = {
-          id: crypto.randomUUID(),
-          date,
-          type,
+          id: crypto.randomUUID(), date, type,
           groupCount: type === 'group' ? groupCount : null,
           clientName: type === 'personal' ? details : null,
-          earned,
-          timestamp: Date.now()
+          earned, timestamp: Date.now()
         };
         setEntries(prev => [newEntry, ...prev]);
         if (type === 'group') setGroupCount(1);
@@ -216,8 +153,7 @@
       const currentMonthStr = todayStr.substring(0, 7);
 
       const stats = useMemo(() => {
-        let todayTotal = 0;
-        let monthTotal = 0;
+        let todayTotal = 0, monthTotal = 0;
         entries.forEach(entry => {
           if (entry.date === todayStr) todayTotal += entry.earned;
           if (entry.date.startsWith(currentMonthStr)) monthTotal += entry.earned;
@@ -225,9 +161,29 @@
         return { todayTotal, monthTotal };
       }, [entries, todayStr, currentMonthStr]);
 
+      const monthlyStats = useMemo(() => {
+        const mStats = {};
+        entries.forEach(entry => {
+          const m = entry.date.substring(0, 7);
+          if (!mStats[m]) mStats[m] = { earned: 0, groupCount: 0, personalCount: 0 };
+          mStats[m].earned += entry.earned;
+          if (entry.type === 'group') mStats[m].groupCount += 1;
+          if (entry.type === 'personal') mStats[m].personalCount += 1;
+        });
+        return Object.entries(mStats)
+          .map(([month, data]) => ({ month, ...data }))
+          .sort((a, b) => b.month.localeCompare(a.month));
+      }, [entries]);
+
+      const formatMonth = (monthStr) => {
+        const [year, month] = monthStr.split('-');
+        const d = new Date(year, month - 1);
+        let f = d.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+        return f.charAt(0).toUpperCase() + f.slice(1).replace(' г.', '');
+      };
+
       const formatDate = (dateString) => {
-        const options = { day: 'numeric', month: 'short', year: 'numeric' };
-        return new Date(dateString + 'T00:00:00').toLocaleDateString('ru-RU', options);
+        return new Date(dateString + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
       };
 
       const sortedEntries = useMemo(() => {
@@ -235,189 +191,214 @@
       }, [entries]);
 
       return (
-        <div className="min-h-screen bg-neutral-50 text-slate-800 pb-10">
-          {/* Header */}
-          <header className="header-gradient text-white p-6 pb-12 rounded-b-3xl shadow-lg">
-            <div className="max-w-md mx-auto relative z-10">
-              <h1 className="text-2xl font-extrabold flex items-center gap-2 tracking-tight">
-                <Icon name="trending-up" className="w-6 h-6 text-orange-400" />
-                Мои Тренировки
-              </h1>
-              <p className="text-slate-400 text-sm mt-1">Учет доходов и клиентов</p>
-            </div>
-          </header>
+        <div className="min-h-screen bg-[#121212] text-white font-sans pb-0 selection:bg-orange-500/30">
+          <main className="max-w-md mx-auto relative z-10 flex flex-col min-h-screen">
 
-          <main className="max-w-md mx-auto px-4 -mt-6 relative z-10 space-y-5">
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="card-dark rounded-2xl p-4 shadow-lg flex flex-col items-center text-center">
-                <div className="bg-orange-500/20 p-2 rounded-full mb-2">
-                  <Icon name="clock" className="w-5 h-5 text-orange-400" />
-                </div>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mb-1">За сегодня</p>
-                <p className="text-xl font-extrabold text-white">{stats.todayTotal.toLocaleString('ru-RU')} <span className="text-xs font-medium text-slate-500">грн</span></p>
-              </div>
-              <div className="card-dark rounded-2xl p-4 shadow-lg flex flex-col items-center text-center">
-                <div className="bg-orange-500/20 p-2 rounded-full mb-2">
-                  <Icon name="wallet" className="w-5 h-5 text-orange-400" />
-                </div>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mb-1">В этом месяце</p>
-                <p className="text-xl font-extrabold text-white">{stats.monthTotal.toLocaleString('ru-RU')} <span className="text-xs font-medium text-slate-500">грн</span></p>
-              </div>
-            </div>
-
-            {/* Form */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-neutral-100">
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-800">
-                <Icon name="plus-circle" className="w-5 h-5 text-orange-500" />
-                Добавить тренировку
-              </h2>
-              <form onSubmit={handleAddEntry} className="space-y-4">
+            {/* Dark top section */}
+            <div className="px-6 pt-12 pb-6 flex-none">
+              <div className="flex justify-between items-center mb-8">
                 <div>
-                  <label className="block text-sm font-medium text-slate-500 mb-1">Дата</label>
-                  <div className="relative">
-                    <Icon name="calendar" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-base"
-                      required
-                    />
+                  <p className="text-gray-400 text-sm font-medium mb-1">Привет,</p>
+                  <h1 className="text-2xl font-bold flex items-center gap-2">Тренер <span className="text-xl">👋</span></h1>
+                </div>
+                <div className="w-10 h-10 bg-[#1E1E1E] rounded-full flex items-center justify-center border border-gray-800">
+                  <Icon name="trending-up" className="w-5 h-5 text-orange-400" />
+                </div>
+              </div>
+
+              {/* Gradient balance card */}
+              <div className="relative bg-gradient-to-br from-[#9BB0E2] via-[#E2C2B3] to-[#FCA481] rounded-[2rem] p-6 shadow-lg overflow-hidden text-gray-900 mb-6">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-[#FF8A4C] rounded-full mix-blend-overlay filter blur-3xl opacity-60"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Icon name="wallet" className="w-4 h-4 opacity-70" />
+                    <p className="text-sm font-medium opacity-80">Заработано за месяц</p>
+                  </div>
+                  <p className="text-4xl font-bold mb-6 tracking-tight">
+                    {stats.monthTotal.toLocaleString('ru-RU')} <span className="text-xl font-medium opacity-80">₴</span>
+                  </p>
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-xs font-semibold opacity-70 mb-1 uppercase tracking-wider">За сегодня</p>
+                      <p className="text-lg font-bold">{stats.todayTotal.toLocaleString('ru-RU')} ₴</p>
+                    </div>
+                    <p className="text-xs font-bold opacity-70 bg-black/10 px-3 py-1.5 rounded-full uppercase tracking-wider">
+                      {currentMonthStr.replace('-', '/')}
+                    </p>
                   </div>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-2 p-1 bg-neutral-100 rounded-xl">
-                  <button type="button" onClick={() => setType('group')}
-                    className={`py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${type === 'group' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>
-                    Групповая
-                  </button>
-                  <button type="button" onClick={() => setType('personal')}
-                    className={`py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${type === 'personal' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>
-                    Персональная
-                  </button>
-                </div>
-
-                {type === 'group' ? (
-                  <div className="fade-in">
-                    <label className="block text-sm font-medium text-slate-500 mb-1">Количество людей (по 150 грн)</label>
-                    <div className="relative">
-                      <Icon name="users" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input
-                        type="number"
-                        min="1"
-                        inputMode="numeric"
-                        value={groupCount}
-                        onChange={(e) => setGroupCount(parseInt(e.target.value) || '')}
-                        className="w-full pl-10 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-base"
-                        placeholder="Сколько пришло человек?"
-                        required
-                      />
-                    </div>
+              {/* Type buttons */}
+              <div className="flex gap-4">
+                <button onClick={() => setType('group')}
+                  className={`flex-1 py-4 px-2 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all duration-300 ${
+                    type === 'group' ? 'bg-[#3B63F6] text-white shadow-[0_8px_20px_rgba(59,99,246,0.3)] scale-100' : 'bg-[#1C1C1E] text-gray-400 scale-95 opacity-80'}`}>
+                  <div className={`p-2.5 rounded-2xl transition-colors ${type === 'group' ? 'bg-white/20' : 'bg-gray-800'}`}>
+                    <Icon name="users" className="w-6 h-6" />
                   </div>
-                ) : (
-                  <div className="fade-in">
-                    <label className="block text-sm font-medium text-slate-500 mb-1">Имя клиента (600 грн)</label>
-                    <div className="relative">
-                      <Icon name="user" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input
-                        type="text"
-                        value={clientName}
-                        onChange={(e) => setClientName(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-base"
-                        placeholder="Например: Анна С."
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <button type="submit"
-                  className="w-full btn-orange text-white font-bold py-3.5 rounded-xl shadow-md transition-all active:scale-[0.98]">
-                  Сохранить ({type === 'group' ? (groupCount || 0) * GROUP_RATE : PERSONAL_RATE} грн)
+                  <span className="text-xs font-bold tracking-wide">Групповая</span>
                 </button>
-              </form>
+                <button onClick={() => setType('personal')}
+                  className={`flex-1 py-4 px-2 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all duration-300 ${
+                    type === 'personal' ? 'bg-[#FF6B35] text-white shadow-[0_8px_20px_rgba(255,107,53,0.3)] scale-100' : 'bg-[#1C1C1E] text-gray-400 scale-95 opacity-80'}`}>
+                  <div className={`p-2.5 rounded-2xl transition-colors ${type === 'personal' ? 'bg-white/20' : 'bg-gray-800'}`}>
+                    <Icon name="user" className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs font-bold tracking-wide">Персональная</span>
+                </button>
+              </div>
             </div>
 
-            {/* History */}
-            <div>
-              <h2 className="text-lg font-bold mb-4 px-2 text-slate-700">История тренировок</h2>
-              {sortedEntries.length === 0 ? (
-                <div className="text-center py-10 px-4 bg-white rounded-3xl border border-neutral-100 border-dashed">
-                  <div className="bg-neutral-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Icon name="calendar" className="w-8 h-8 text-neutral-300" />
-                  </div>
-                  <p className="text-slate-400 font-medium">Пока нет записей</p>
-                  <p className="text-sm text-slate-300 mt-1">Добавьте первую тренировку выше</p>
+            {/* White bottom section */}
+            <div className="bg-white text-gray-900 rounded-t-[2.5rem] p-6 flex-1 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex flex-col mt-2">
+
+              {/* Add form */}
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-4 px-1">
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <Icon name="plus-circle" className={`w-5 h-5 ${type === 'group' ? 'text-[#3B63F6]' : 'text-[#FF6B35]'}`} />
+                    Новая запись
+                  </h2>
+                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+                    className="bg-gray-50 text-sm font-semibold text-gray-600 outline-none cursor-pointer py-1.5 px-3 rounded-lg border border-gray-100" required />
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {sortedEntries.map((entry) => (
-                    <div key={entry.id} className="bg-white p-4 rounded-2xl shadow-sm border border-neutral-100 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-3 rounded-full flex-shrink-0 ${entry.type === 'group' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
-                          <Icon name={entry.type === 'group' ? 'users' : 'user'} className="w-5 h-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-slate-800 text-sm">
-                            {entry.type === 'group' ? 'Групповая' : 'Персональная'}
-                          </h3>
-                          <div className="flex flex-col text-xs text-slate-400 mt-0.5">
-                            <span className="flex items-center gap-1">
-                              <Icon name="calendar" className="w-3 h-3" />
-                              {formatDate(entry.date)}
-                            </span>
-                            <span className="font-medium text-slate-600">
-                              {entry.type === 'group' ? `${entry.groupCount} чел.` : entry.clientName}
-                            </span>
+                <form onSubmit={handleAddEntry} className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-2">
+                      {type === 'group' ? 'Кол-во людей' : 'Имя клиента'}
+                    </label>
+                    {type === 'group' ? (
+                      <input type="number" min="1" inputMode="numeric" value={groupCount}
+                        onChange={(e) => setGroupCount(parseInt(e.target.value) || '')}
+                        className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-[#3B63F6] focus:bg-white outline-none transition-all font-semibold text-gray-800"
+                        placeholder="Сколько человек?" required />
+                    ) : (
+                      <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)}
+                        className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-[#FF6B35] focus:bg-white outline-none transition-all font-semibold text-gray-800"
+                        placeholder="Например: Анна" required />
+                    )}
+                  </div>
+                  <button type="submit"
+                    className={`h-[52px] px-5 rounded-2xl text-white font-bold transition-all active:scale-95 shadow-md flex items-center justify-center whitespace-nowrap ${
+                      type === 'group' ? 'bg-[#3B63F6] shadow-blue-500/20' : 'bg-[#FF6B35] shadow-orange-500/20'}`}>
+                    +{type === 'group' ? (groupCount || 0) * GROUP_RATE : PERSONAL_RATE} ₴
+                  </button>
+                </form>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex bg-gray-100/80 p-1 rounded-2xl mb-5">
+                {['history', 'stats', 'backup'].map(tab => (
+                  <button key={tab} onClick={() => setActiveTab(tab)}
+                    className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all ${
+                      activeTab === tab ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
+                    {tab === 'history' ? 'История' : tab === 'stats' ? 'Статистика' : 'Копия'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab content */}
+              <div className="flex-1 pb-6">
+                {activeTab === 'history' && (
+                  sortedEntries.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-400 font-medium text-sm">Здесь будет список тренировок</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {sortedEntries.map((entry) => (
+                        <div key={entry.id} className="flex items-center justify-between group">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center ${
+                              entry.type === 'group' ? 'bg-[#EEF2FF] text-[#3B63F6]' : 'bg-[#FFF0ED] text-[#FF6B35]'}`}>
+                              <Icon name={entry.type === 'group' ? 'users' : 'user'} className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-gray-900 text-[15px]">
+                                {entry.type === 'group' ? 'Групповая' : entry.clientName}
+                              </h3>
+                              <p className="text-xs text-gray-400 font-medium mt-0.5">
+                                {entry.type === 'group' ? `${entry.groupCount} человек` : 'Персональная'} · {formatDate(entry.date)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-bold text-gray-900">{entry.earned} ₴</span>
+                            <button onClick={() => handleDelete(entry.id)}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                confirmDelete === entry.id ? 'text-red-600 bg-red-50' : 'text-gray-300 active:text-red-500 active:bg-red-50'}`}>
+                              <Icon name="trash-2" className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <div className="text-right">
-                          <span className="block font-bold text-orange-500 text-sm">+{entry.earned.toLocaleString('ru-RU')}</span>
-                          <span className="block text-xs text-slate-400">грн</span>
+                      ))}
+                    </div>
+                  )
+                )}
+
+                {activeTab === 'stats' && (
+                  monthlyStats.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-400 font-medium text-sm">Пока нет данных для статистики</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {monthlyStats.map((stat) => (
+                        <div key={stat.month} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-[1.25rem] bg-gray-200/50 flex items-center justify-center text-gray-500">
+                              <Icon name="calendar" className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-gray-900 text-[15px]">{formatMonth(stat.month)}</h3>
+                              <p className="text-xs text-gray-500 font-medium mt-0.5">
+                                {stat.groupCount} групп. · {stat.personalCount} перс.
+                              </p>
+                            </div>
+                          </div>
+                          <span className="font-bold text-gray-900 text-[15px]">{stat.earned.toLocaleString('ru-RU')} ₴</span>
                         </div>
-                        <button
-                          onClick={() => handleDelete(entry.id)}
-                          className={`p-2 rounded-lg transition-colors ${confirmDelete === entry.id ? 'text-red-600 bg-red-50' : 'text-slate-300 hover:text-red-500 hover:bg-red-50'}`}
-                          title={confirmDelete === entry.id ? 'Нажмите еще раз для удаления' : 'Удалить запись'}
-                        >
-                          <Icon name="trash-2" className="w-4 h-4" />
+                      ))}
+                    </div>
+                  )
+                )}
+
+                {activeTab === 'backup' && (
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Icon name="shield" className="w-5 h-5 text-green-600" />
+                        <h3 className="font-bold text-gray-900">Резервная копия</h3>
+                      </div>
+                      <p className="text-xs text-gray-400 mb-4">Сохраняйте копию в файл перед обновлением телефона. Импорт добавит только новые записи.</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button onClick={handleExport} disabled={entries.length === 0}
+                          className="flex items-center justify-center gap-2 py-3 px-4 bg-green-600 text-white font-semibold rounded-xl text-sm transition-all active:scale-[0.97] disabled:opacity-30">
+                          <Icon name="download" className="w-4 h-4" />
+                          Сохранить
+                        </button>
+                        <button onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center justify-center gap-2 py-3 px-4 bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm transition-all active:scale-[0.97]">
+                          <Icon name="upload" className="w-4 h-4" />
+                          Загрузить
                         </button>
                       </div>
+                      <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {/* Backup / Restore */}
-            <div className="card-dark rounded-3xl p-5 shadow-lg">
-              <h2 className="text-base font-bold mb-3 flex items-center gap-2 text-white">
-                <Icon name="shield" className="w-5 h-5 text-orange-400" />
-                Резервная копия
-              </h2>
-              <p className="text-xs text-slate-400 mb-4">Сохраняйте копию данных в файл, чтобы не потерять при обновлении телефона</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={handleExport} disabled={entries.length === 0}
-                  className="flex items-center justify-center gap-2 py-3 px-4 bg-white/10 text-orange-300 font-semibold rounded-xl text-sm transition-all active:scale-[0.97] active:bg-white/20 disabled:opacity-30">
-                  <Icon name="download" className="w-4 h-4" />
-                  Сохранить
-                </button>
-                <button onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center justify-center gap-2 py-3 px-4 bg-white/10 text-slate-300 font-semibold rounded-xl text-sm transition-all active:scale-[0.97] active:bg-white/20">
-                  <Icon name="upload" className="w-4 h-4" />
-                  Загрузить
-                </button>
+                    <p className="text-[11px] text-gray-300 text-center px-4">
+                      Всего записей: {entries.length}
+                    </p>
+                  </div>
+                )}
               </div>
-              <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
             </div>
-
           </main>
 
           {/* Toast */}
           {toast && (
-            <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl shadow-lg text-sm font-medium z-50 fade-in ${toast.isError ? 'bg-red-600 text-white' : 'bg-slate-900 text-white'}`}>
+            <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl shadow-lg text-sm font-medium z-50 fade-in ${
+              toast.isError ? 'bg-red-600 text-white' : 'bg-gray-900 text-white'}`}>
               {toast.msg}
             </div>
           )}
@@ -429,7 +410,6 @@
   </script>
 
   <script>
-    // Register Service Worker for offline support & PWA
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
