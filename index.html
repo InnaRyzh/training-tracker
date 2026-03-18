@@ -47,6 +47,7 @@
     };
 
     const STORAGE_KEY = 'training-tracker-entries';
+    const CHARITY_KEY = 'training-tracker-charity';
     const GROUP_RATE = 150;
     const PERSONAL_RATE = 600;
 
@@ -62,14 +63,30 @@
       catch (e) { console.error('Failed to save:', e); }
     }
 
+    function loadCharity() {
+      try {
+        const data = localStorage.getItem(CHARITY_KEY);
+        return data ? JSON.parse(data) : [];
+      } catch { return []; }
+    }
+
+    function saveCharity(entries) {
+      try { localStorage.setItem(CHARITY_KEY, JSON.stringify(entries)); }
+      catch (e) { console.error('Failed to save charity:', e); }
+    }
+
     function App() {
       const [entries, setEntries] = useState(loadEntries);
+      const [charityEntries, setCharityEntries] = useState(loadCharity);
       const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
       const [type, setType] = useState('group');
       const [groupCount, setGroupCount] = useState(1);
       const [clientName, setClientName] = useState('');
+      const [charityName, setCharityName] = useState('');
+      const [charityAmount, setCharityAmount] = useState('');
       const [activeTab, setActiveTab] = useState('history');
       const [expandedMonth, setExpandedMonth] = useState(null);
+      const [expandedPerson, setExpandedPerson] = useState(null);
       const [confirmDelete, setConfirmDelete] = useState(null);
       const [toast, setToast] = useState(null);
       const fileInputRef = React.useRef(null);
@@ -79,6 +96,7 @@
       }, []);
 
       useEffect(() => { saveEntries(entries); }, [entries]);
+      useEffect(() => { saveCharity(charityEntries); }, [charityEntries]);
 
       const showToast = (msg, isError) => {
         setToast({ msg, isError });
@@ -86,7 +104,7 @@
       };
 
       const handleExport = () => {
-        const data = JSON.stringify(entries, null, 2);
+        const data = JSON.stringify({ entries, charity: charityEntries }, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -103,15 +121,26 @@
         const reader = new FileReader();
         reader.onload = (ev) => {
           try {
-            const data = JSON.parse(ev.target.result);
-            if (!Array.isArray(data)) throw new Error('not array');
+            const raw = JSON.parse(ev.target.result);
+            // Support old format (plain array) and new format ({entries, charity})
+            const trainData = Array.isArray(raw) ? raw : (raw.entries || []);
+            const charData = Array.isArray(raw) ? [] : (raw.charity || []);
+            let imported = 0;
             setEntries(prev => {
               const existingIds = new Set(prev.map(e => e.id));
-              const newOnes = data.filter(e => e.id && !existingIds.has(e.id));
-              if (newOnes.length === 0) { showToast('Нет новых записей для импорта'); return prev; }
-              showToast(`Импортировано ${newOnes.length} записей`);
+              const newOnes = trainData.filter(e => e.id && !existingIds.has(e.id));
+              imported += newOnes.length;
+              if (newOnes.length === 0) return prev;
               return [...newOnes, ...prev];
             });
+            setCharityEntries(prev => {
+              const existingIds = new Set(prev.map(e => e.id));
+              const newOnes = charData.filter(e => e.id && !existingIds.has(e.id));
+              imported += newOnes.length;
+              if (newOnes.length === 0) return prev;
+              return [...newOnes, ...prev];
+            });
+            showToast(imported > 0 ? `Импортировано ${imported} записей` : 'Нет новых записей для импорта');
           } catch { showToast('Ошибка: файл повреждён', true); }
         };
         reader.readAsText(file);
@@ -139,6 +168,49 @@
         if (type === 'group') setGroupCount(1);
         if (type === 'personal') setClientName('');
       };
+
+      const handleAddCharity = (e) => {
+        e.preventDefault();
+        const amount = parseInt(charityAmount);
+        if (!charityName.trim() || !amount || amount <= 0) return;
+        const newEntry = {
+          id: crypto.randomUUID(),
+          date,
+          name: charityName.trim(),
+          amount,
+          timestamp: Date.now()
+        };
+        setCharityEntries(prev => [newEntry, ...prev]);
+        setCharityAmount('');
+      };
+
+      const handleDeleteCharity = (id) => {
+        if (confirmDelete === id) {
+          setCharityEntries(prev => prev.filter(entry => entry.id !== id));
+          setConfirmDelete(null);
+        } else {
+          setConfirmDelete(id);
+          setTimeout(() => setConfirmDelete(null), 3000);
+        }
+      };
+
+      const charityByPerson = useMemo(() => {
+        const byPerson = {};
+        charityEntries.forEach(entry => {
+          if (!byPerson[entry.name]) byPerson[entry.name] = { total: 0, entries: [] };
+          byPerson[entry.name].total += entry.amount;
+          byPerson[entry.name].entries.push(entry);
+        });
+        return Object.entries(byPerson)
+          .map(([name, data]) => ({
+            name,
+            total: data.total,
+            entries: data.entries.sort((a, b) => new Date(b.date) - new Date(a.date) || b.timestamp - a.timestamp)
+          }))
+          .sort((a, b) => b.total - a.total);
+      }, [charityEntries]);
+
+      const charityTotal = useMemo(() => charityEntries.reduce((s, e) => s + e.amount, 0), [charityEntries]);
 
       const handleDelete = (id) => {
         if (confirmDelete === id) {
@@ -286,11 +358,11 @@
 
               {/* Tabs */}
               <div className="flex bg-gray-100/80 p-1 rounded-2xl mb-5">
-                {['history', 'stats', 'backup'].map(tab => (
+                {['history', 'stats', 'charity', 'backup'].map(tab => (
                   <button key={tab} onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all ${
+                    className={`flex-1 py-2 text-[13px] font-bold rounded-xl transition-all ${
                       activeTab === tab ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
-                    {tab === 'history' ? 'История' : tab === 'stats' ? 'Статистика' : 'Копия'}
+                    {{history: 'История', stats: 'Стат.', charity: '❤️ Помощь', backup: 'Копия'}[tab]}
                   </button>
                 ))}
               </div>
@@ -396,6 +468,82 @@
                   )
                 )}
 
+                {activeTab === 'charity' && (
+                  <div className="space-y-5">
+                    {/* Add charity form */}
+                    <form onSubmit={handleAddCharity} className="space-y-3">
+                      <div className="flex gap-3">
+                        <input type="text" value={charityName} onChange={(e) => setCharityName(e.target.value)}
+                          className="flex-1 px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-pink-400 focus:bg-white outline-none transition-all font-semibold text-gray-800 text-sm"
+                          placeholder="Имя (напр. Мама)" required />
+                        <input type="number" inputMode="numeric" value={charityAmount} onChange={(e) => setCharityAmount(e.target.value)}
+                          className="w-28 px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-pink-400 focus:bg-white outline-none transition-all font-semibold text-gray-800 text-sm"
+                          placeholder="Сумма ₴" min="1" required />
+                      </div>
+                      <button type="submit"
+                        className="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold rounded-2xl transition-all active:scale-[0.97] shadow-md shadow-pink-500/20 text-sm">
+                        ❤️ Записать помощь
+                      </button>
+                    </form>
+
+                    {/* Total */}
+                    {charityTotal > 0 && (
+                      <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-2xl p-4 border border-pink-100">
+                        <p className="text-xs font-bold text-pink-400 uppercase tracking-wider mb-1">Всего помощь</p>
+                        <p className="text-2xl font-bold text-gray-900">{charityTotal.toLocaleString('ru-RU')} ₴</p>
+                      </div>
+                    )}
+
+                    {/* By person */}
+                    {charityByPerson.length > 0 && (
+                      <div className="space-y-3">
+                        {charityByPerson.map(person => {
+                          const isOpen = expandedPerson === person.name;
+                          return (
+                            <div key={person.name}>
+                              <button onClick={() => setExpandedPerson(isOpen ? null : person.name)}
+                                className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                                  isOpen ? 'bg-white border-pink-200 shadow-sm' : 'bg-gray-50 border-gray-100'}`}>
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${
+                                    isOpen ? 'bg-pink-500 text-white' : 'bg-pink-50 text-pink-400'}`}>
+                                    ❤️
+                                  </div>
+                                  <div className="text-left">
+                                    <h3 className="font-bold text-gray-900 text-[15px]">{person.name}</h3>
+                                    <p className="text-xs text-gray-400 font-medium">{person.entries.length} записей</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-gray-900">{person.total.toLocaleString('ru-RU')} ₴</span>
+                                  <span className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}>▾</span>
+                                </div>
+                              </button>
+                              {isOpen && (
+                                <div className="mt-2 ml-4 mr-1 space-y-2 fade-in">
+                                  {person.entries.map(entry => (
+                                    <div key={entry.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                                      <div>
+                                        <p className="font-semibold text-gray-700 text-sm">{entry.amount.toLocaleString('ru-RU')} ₴</p>
+                                        <p className="text-[11px] text-gray-400">{formatDate(entry.date)}</p>
+                                      </div>
+                                      <button onClick={() => handleDeleteCharity(entry.id)}
+                                        className={`p-1.5 rounded-lg transition-colors ${
+                                          confirmDelete === entry.id ? 'text-red-600 bg-red-50' : 'text-gray-300 active:text-red-500 active:bg-red-50'}`}>
+                                        <Icon name="trash-2" className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {activeTab === 'backup' && (
                   <div className="space-y-4">
                     <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
@@ -419,7 +567,7 @@
                       <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
                     </div>
                     <p className="text-[11px] text-gray-300 text-center px-4">
-                      Всего записей: {entries.length}
+                      Тренировки: {entries.length} · Помощь: {charityEntries.length}
                     </p>
                   </div>
                 )}
